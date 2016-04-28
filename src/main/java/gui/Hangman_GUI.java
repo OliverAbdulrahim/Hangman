@@ -795,9 +795,63 @@ public final class Hangman_GUI
         updateCurrentLabel();
         updateImages();
         updateStatistics();
+        startMusic();
         setStateOfAll(true);
     }
-
++    
++    //starts commit
++    
++    Clip musicClip;
++    
++    private void startMusic(){
++        startMusic("");
++    }
++    
++    private void stopMusic(){
++        musicClip.stop();
++    }
++    
++    private void startMusic(String n){
++        startSound(n, true);
++    
++    private void startSound(String n, boolean isMusic){
++        if(isMusic){
++            musicClip.stop();
++            try{
++                musicClip = AudioSystem.getClip();
++                AudioSystem inputstream;
++                switch (n) {
++                    case "song1.wav":
++                         inputstream = AudioSystem.getAudioInputStream(class.getResource("../../resources/music/song1.wav"));
++                         break;
++                    default:
++                         inputstream = AudioSystem.getAudioInputStream(class.getResource("../../resources/music/song1.wav"));
++                }
++                musicClip.open(inputstream);
++                musicClip.loop(Clip.LOOK_CONTINUOUSLY);
++                musicClip.start();
++            }catch(Exception e ){System.out.println("something went wrong with music: " + e);}
++        }
++        else{
++            try{
++                Clip effectClip = AudioSystem.getClip();
++                AudioSystem einputstream;
++                switch(n){
++                    case "effect1":
++                        einputstream = AudioSystem.getAudioInputStream(class.getResource("../../resources/effect/song1.wav"));
++                        break;
++                    default:
++                }
++                effectClip.open(inputstream);
++                effectClip.start();
++            }catch(Exception e){System.out.println("something went wrong with sound effects: " + e);}
++        }
++    }
++    
++    }
++    
++    //ends commit
++    
     /**
      * Asks for user input to reset the game, including game statistics such as
      * win rate.
