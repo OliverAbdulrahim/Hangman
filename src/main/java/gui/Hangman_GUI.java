@@ -1,11 +1,16 @@
 package gui;
 
 import functions.StringUtilities;
-import java.awt.*;
-import java.awt.event.*;
-import javax.swing.*;
 import game.Actor;
 import game.Hangman;
+import language.Difficulty;
+import language.Word;
+
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.util.ArrayList;
 import java.util.EventObject;
 import java.util.List;
@@ -13,8 +18,6 @@ import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
-import language.Difficulty;
-import language.Word;
 
 /**
  * The {@code Hangman_GUI} class provides for a user interface for the
@@ -57,8 +60,8 @@ public final class Hangman_GUI
      * @param action The {@code Consumer} to apply to every {@code Component}
      *        contained in the specified {@code Container}.
      */
-    private static void applyTo(Container container, 
-            Consumer<? super Component> action) 
+    private static void applyTo(Container container,
+            Consumer<? super Component> action)
     {
         Stream.of(container.getComponents()).forEach(action);
     }
@@ -74,7 +77,7 @@ public final class Hangman_GUI
     private static void setStateOf(Container container, boolean state) {
         applyTo(container, component -> component.setEnabled(state));
     }
-    
+
     /**
      * Displays a {@code JOptionPane} confirmation dialog using the given
      * arguments.
@@ -132,12 +135,13 @@ public final class Hangman_GUI
         }
         catch (ClassNotFoundException | InstantiationException
              | IllegalAccessException | UnsupportedLookAndFeelException ex) {
-            Logger.getLogger(Hangman_GUI.class.getName()).log(Level.SEVERE, 
+            Logger.getLogger(Hangman_GUI.class.getName()).log(Level.SEVERE,
                     "Error with look and feel settings. "
                   + "Check if they are installed correctly", ex);
         }
         SwingUtilities.invokeLater(() -> {
             Hangman_GUI gui = new Hangman_GUI();
+            SoundEffect.initialiseSoundList();
             gui.setVisible(true);
             gui.newGameDialog("Would you like to start a new game?", "New " +
                     "Game");
@@ -145,30 +149,30 @@ public final class Hangman_GUI
     }
 
 // Game variables
-    
+
     /**
      * Stores the game manager for this user interface.
      */
     private Hangman game;
-    
+
     /**
      * Stores the amount of games that this user interface has played. May be
      * reset at any time using {@link #resetGameMenuItem}.
      */
     private int gamesPlayed;
-    
+
     /**
      * Stores the amount of games that this user interface has won. May be
      * reset at any time using {@link #resetGameMenuItem}.
      */
     private int gamesWon;
-    
-    // The indented list of attributes below represents the hierarchy of the 
+
+    // The indented list of attributes below represents the hierarchy of the
     // Component objects contained within this class. Components with higher
     // indentation are layered over those with less indentation. Additionally,
-    // items are presented in the general top-to-bottom, left-to-right order in 
+    // items are presented in the general top-to-bottom, left-to-right order in
     // which they appear on the actual GUI.
-    
+
 //  private final JFrame this;
         private JMenuBar menuBar;
             private JMenu fileMenu;
@@ -178,6 +182,7 @@ public final class Hangman_GUI
                 private JMenuItem exitMenuItem;
             private JMenu settingsMenu;
                 private JMenuItem gameSettingsMenuItem;
+                private JMenuItem muter;
         private JPanel imagePanel;
             private JLabel imageLabel;
         private JPanel currentWordPanel;
@@ -253,11 +258,11 @@ public final class Hangman_GUI
         };
         applyToAll(component -> component.addKeyListener(listener));
         // Add the listener to this object here in this method rather than in
-        // applyToAll(Consumer) to prevent a bug. The applyToAll(Consumer) 
+        // applyToAll(Consumer) to prevent a bug. The applyToAll(Consumer)
         // method uses the getAllComponents(Container) method, which returns a
-        // List containing all Component objects in the given container. Adding 
-        // the given Container to the returned List may be problematic: certain 
-        // repaint operations, such as Component#setEnabled() may trigger an 
+        // List containing all Component objects in the given container. Adding
+        // the given Container to the returned List may be problematic: certain
+        // repaint operations, such as Component#setEnabled() may trigger an
         // undesired minimize operation on Window objects. Adding the listener
         // here is a workaround to this.
         this.addKeyListener(listener);
@@ -268,7 +273,7 @@ public final class Hangman_GUI
      * of the GUI.
      */
     private void addButtonListeners() {
-        // keyboardPanel only has JButtons - okay to perform weak cast to 
+        // keyboardPanel only has JButtons - okay to perform weak cast to
         // AbstractButton
         applyTo(keyboardPanel, component -> {
             ((AbstractButton) component).addActionListener(this :: parseGuess);
@@ -288,6 +293,7 @@ public final class Hangman_GUI
         exitMenuItem = new JMenuItem();
         settingsMenu = new JMenu();
         gameSettingsMenuItem = new JMenuItem();
+        muter = new JMenuItem();
 
         imagePanel = new JPanel();
         imageLabel = new JLabel();
@@ -337,13 +343,26 @@ public final class Hangman_GUI
         fileMenu.add(resetGameMenuItem);
         fileMenu.add(fileSeparator);
 
+        menuBar.add(fileMenu);
         exitMenuItem.setText("Exit");
         exitMenuItem.addActionListener(e -> quit());
         fileMenu.add(exitMenuItem);
 
-        menuBar.add(fileMenu);
 
         settingsMenu.setText("Options");
+
+        muter.setText("Mute");
+        muter.addActionListener(e -> {
+            if(SoundEffect.isMute) {
+                SoundEffect.unmute();
+                muter.setText("Mute");
+            }
+            else {
+                SoundEffect.mute();
+                muter.setText("Unmute");
+            }
+        });
+        settingsMenu.add(muter);
 
         gameSettingsMenuItem.setText("Settings");
         gameSettingsMenuItem.addActionListener(e -> showSettingsFrame());
@@ -355,11 +374,11 @@ public final class Hangman_GUI
     // imagePanel setup
         imageLabel.setHorizontalAlignment(SwingConstants.CENTER);
         imageLabel.setIcon(game.images()[0]);
-        
+
         imagePanel.setBorder(BorderFactory.createTitledBorder("Hangman"));
         imagePanel.setPreferredSize(new Dimension(248, 180));
         imagePanel.add(imageLabel);
-        
+
     // currentWordPanel setup
         currentWordLabel.setHorizontalAlignment(SwingConstants.CENTER);
         currentWordLabel.setText("<html><p>Welcome to Hangman. To begin, press "
@@ -370,13 +389,13 @@ public final class Hangman_GUI
         currentWordLabel.setMinimumSize(dim);
         currentWordLabel.setMaximumSize(dim);
         currentWordLabel.setPreferredSize(dim);
-        
+
         currentWordPanel.setBorder(BorderFactory.createTitledBorder("Current Word"));
         currentWordPanel.add(currentWordLabel);
-        
+
     // gameOperationsPanel setup
         final Color fieldBackground = Color.WHITE;
-        
+
         guessesLeftLabel.setHorizontalAlignment(SwingConstants.RIGHT);
         guessesLeftLabel.setText("Guesses Left");
 
@@ -395,7 +414,7 @@ public final class Hangman_GUI
 
         newWordButton.setText("New Word");
         newWordButton.addActionListener(e -> newGame());
-        
+
         giveUpButton.setText("Give Up");
         giveUpButton.addActionListener(e -> attemptGiveUp());
 
@@ -408,7 +427,7 @@ public final class Hangman_GUI
 
         hintButton.setText("Hint");
         hintButton.addActionListener(e -> doHint());
-        
+
         gameOperationsPanel.setBorder(BorderFactory.createTitledBorder("Statistics and Options"));
         layout = new GroupLayout(gameOperationsPanel);
         gameOperationsPanel.setLayout(layout);
@@ -480,7 +499,7 @@ public final class Hangman_GUI
         final Insets leadingInset = new Insets(0, -padding, 0, 0);
 
         // The rows of the keyboard have different amount of "keys" and are
-        // center-padded. Add this padding to every row after the first. Also 
+        // center-padded. Add this padding to every row after the first. Also
         // add y to x for every row additional offset.
         int keyboardIndex = 0;
         for (int y = 0; y <= rows; y++) {
@@ -495,7 +514,7 @@ public final class Hangman_GUI
                 keyboardPanel.add(buildButton(text), c);
             }
         }
-        
+
         settingsFrame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
         settingsFrame.setTitle("Settings");
         settingsFrame.setLocationByPlatform(true);
@@ -584,7 +603,7 @@ public final class Hangman_GUI
                                         .addComponent(actorLabel, GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE))
                                 .addContainerGap(GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
-        
+
         layout.linkSize(SwingConstants.HORIZONTAL, actorComboBox, difficultyLabel, easyRadioButton, hardRadioButton, mediumRadioButton);
 
         layout.setVerticalGroup(
@@ -604,9 +623,9 @@ public final class Hangman_GUI
                                 .addComponent(actorComboBox, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)
                                 .addContainerGap(13, Short.MAX_VALUE))
         );
-        
+
         layout.linkSize(SwingConstants.VERTICAL, easyRadioButton, hardRadioButton, mediumRadioButton);
-        
+
         layout = new GroupLayout(settingsFrame.getContentPane());
         settingsFrame.getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
@@ -665,7 +684,7 @@ public final class Hangman_GUI
         );
         setStateOfAll(false);
         setStateOf(menuBar, true);
-        
+
         setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         setTitle("Hangman");
         setLocationByPlatform(true);
@@ -673,16 +692,16 @@ public final class Hangman_GUI
 
         addTypingListeners();
         addButtonListeners();
-        
+
         pack();
     }
 
     /**
-     * Builder for keyboard components. The components returned by this method 
-     * are objects of {@code JButton}, and use the "Consolas" font (12pt), have 
+     * Builder for keyboard components. The components returned by this method
+     * are objects of {@code JButton}, and use the "Consolas" font (12pt), have
      * the given text, and have a specially-defined {@code toString} method that
      * returns the given {@code text} argument.
-     * 
+     *
      * @param text The text of the component.
      * @return A component with the given text.
      */
@@ -743,7 +762,7 @@ public final class Hangman_GUI
             }
         }
     }
-    
+
     /**
      * Finds the {@code JButton} in the {@code keyboardPanel} that represents
      * the given character parameter and disables it.
@@ -753,7 +772,7 @@ public final class Hangman_GUI
     private Component getRepresentative(char guess) {
         char sanitizedGuess = Word.sanitizeCharacter(guess);
         for (int i = 0; i < keyboardPanel.getComponentCount(); i++) {
-            // Components in keyboardPanel have a specially-defined toString 
+            // Components in keyboardPanel have a specially-defined toString
             // that returns the character that they represent.
             Component c = keyboardPanel.getComponent(i);
             char buttonText = Word.sanitizeCharacter(c.toString().charAt(0));
@@ -763,7 +782,7 @@ public final class Hangman_GUI
         }
         throw new IllegalArgumentException("No component for \'" + guess + "\'");
     }
-    
+
     /**
      * Attempts to make a move on the game board. This method updates the game
      * board appropriately depending on the validity of the guess.
@@ -791,6 +810,7 @@ public final class Hangman_GUI
         if (game.hasGuessed() && !game.hasWon()) {
             lostGame(true);
         }
+        SoundEffect.music.start();
         updateGameSettings();
         updateCurrentLabel();
         updateImages();
@@ -812,7 +832,7 @@ public final class Hangman_GUI
             newGame();
         }
     }
-    
+
     /**
      * Attempts to get user input on whether or not to "give up" or throw this
      * current game. If the user specifies yes, the current game is considered a
@@ -925,12 +945,12 @@ public final class Hangman_GUI
         int remaining = game.getGuessesLeft();
         guessesLeftField.setText(remaining + "");
 
-        // Must cast one value to a double - division by zero with integral 
+        // Must cast one value to a double - division by zero with integral
         // types will throw ArithmeticException
         double rate = (double) gamesWon / gamesPlayed;
         String formattedRate = StringUtilities.doubleAsPercent(rate);
         winRateField.setText(formattedRate);
-        
+
         String gameInfo = "Games won/played : " + gamesWon + '/' + gamesPlayed + '.';
         winRateField.setToolTipText(gameInfo);
         winRateLabel.setToolTipText(gameInfo);
@@ -976,6 +996,8 @@ public final class Hangman_GUI
         gamesWon++;
         gamesPlayed++;
         if (!quietMode) {
+            SoundEffect.stop(SoundEffect.music);
+                SoundEffect.winSound.start();
             String actual = StringUtilities.asSentence(game.getCurrentWord());
             gameEnded("Nice guessing! \"" + actual + "\" was the correct word!", "Winner!");
         }
@@ -991,8 +1013,10 @@ public final class Hangman_GUI
         imageLabel.setIcon(game.images()[game.maxGuesses()]);
         gamesPlayed++;
         if (!quietMode) {
-        String actual = StringUtilities.asSentence(game.getCurrentWord());
-        gameEnded("Sorry! \"" + actual + "\" was the correct word!", "Loser!");
+            SoundEffect.stop(SoundEffect.music);
+            SoundEffect.loseSound.start();
+            String actual = StringUtilities.asSentence(game.getCurrentWord());
+            gameEnded("Sorry! \"" + actual + "\" was the correct word!", "Loser!");
         }
     }
 
@@ -1025,7 +1049,7 @@ public final class Hangman_GUI
             showSettingsFrame();
         }
     }
-    
+
     /**
      * Quits the the GUI, closing everything and ending the program execution.
      */
@@ -1041,5 +1065,5 @@ public final class Hangman_GUI
         gamesPlayed = 0;
         gamesWon = 0;
     }
-    
+
 }
