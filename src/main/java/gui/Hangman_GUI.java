@@ -15,7 +15,10 @@ import java.util.logging.Logger;
 import java.util.stream.Stream;
 import language.Difficulty;
 import language.Word;
-
+import java.lang.Thread;
+import java.lang.Runnable;
+import javax.sound.sampled.Clip;
+import javax.sound.sampled.AudioSystem;
 /**
  * The {@code Hangman_GUI} class provides for a user interface for the
  * {@code hangman} package.
@@ -797,7 +800,51 @@ public final class Hangman_GUI
         updateStatistics();
         setStateOfAll(true);
     }
+    
+    private void startMusic() {
+        startMusic("");
+    }
 
+    private void stopMusic() {
+        startSound("stop it please", true);
+    }
+
+    private void startMusic(String n) {
+        startSound(n, true);
+    }
+
+    private void startSound(String n, boolean isMusic) {
+        try {
+            Clip c;
+            if(n=="stop it please") {
+                c.stop();
+                return;
+            }
+            if(isMusic) {
+                c = AudioSystem.getClip();
+                AudioSystem inputstream;
+                inputstream = AudioSystem.getAudioInputStream(Hangman_GUI.class.getResourceAsStream("../../resources/music/"+n));
+                c.loop(Clip.LOOK_CONTINUOUSLY);
+                c.open(inputstream);
+                c.start();
+            }
+            else {
+                new Thread(Runnable soundInstance = () -> {
+                            Clip c;
+                            c = AudioSystem.getClip();
+                            AudioSystem inputstream;
+                            inputstream = AudioSystem.getAudioInputStream(Hangman_GUI.class.getResourceAsStream("../../resources/effects/"+n));
+                            c.open(inputstream);
+                            c.start();
+                        }
+                    ).start();
+            }
+        }
+        catch(Exception e ) {
+            System.out.println("something went wrong with music: " + e);
+        }
+    }
+    
     /**
      * Asks for user input to reset the game, including game statistics such as
      * win rate.
